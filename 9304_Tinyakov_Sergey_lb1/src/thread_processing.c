@@ -1,6 +1,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <time.h>
 
 #include "read_write.h"
 #include "matrix_operations.h"
@@ -8,7 +9,6 @@
 
 #define N_THREADS 4
 #define EPS 0.0001
-
 
 void* reader_func(void* arg){
     ThreadReaderMatrix *m = (ThreadReaderMatrix*) arg;
@@ -39,7 +39,7 @@ void* writer_func(void* arg){
 
 int main(int argc, char** argv){
     if (argc < 4){
-        puts("Usage: generate_matrix <input_filename1> <input_filename2> <output_filename1> <thread_number> <mode>\nMode: bin (default) or text");
+        puts("Usage: thread_sum <input_filename1> <input_filename2> <output_filename1> <thread_number> <mode>\nMode: bin (default) or text");
         return 1;
     }
     char mode = 0;
@@ -67,6 +67,11 @@ int main(int argc, char** argv){
         printf("Unknown mode. Avaiable modes are 'bin' and 'text'\n");
         return 1;
     }
+    // create time structures
+    #ifdef TIME_OUTPUT
+    struct timespec global_start, global_end, sum_start, sum_end;
+    clock_gettime(CLOCK_MONOTONIC_RAW, &global_start);
+    #endif
     // Read sizes of matrices
     long int height1, width1, height2, width2;
     if (read_size_from_file(argv[1], mode, &height1, &width1)){
@@ -81,7 +86,7 @@ int main(int argc, char** argv){
         puts("Matrices have different dimensions!");
         return 1;
     }
-    int ret;
+    int ret = 0;
     long int msize = height1 * width1;
     // alloc memory
     ThreadReaderMatrix m1 = {0, mode, 1, NULL, NULL}, m2 = {0, mode, 2, NULL, NULL};
@@ -133,6 +138,7 @@ int main(int argc, char** argv){
     pthread_join(reader1, NULL);
     pthread_join(reader2, NULL);
     if (ret){
+        puts("Ret");
         goto end_main;
     }
     if (m1.flag != 0xFF || m2.flag != 0xFF){
@@ -142,6 +148,9 @@ int main(int argc, char** argv){
     }
 
     // sum matrices
+    #ifdef TIME_OUTPUT
+    clock_gettime(CLOCK_MONOTONIC_RAW, &sum_start);
+    #endif
     int ssize = ((float)msize / n) - msize < EPS ? msize / n : msize / n + 1;
     for(int i = 0; i < n; i++){
         sum_structs[i].data1 = m1.data;
@@ -152,6 +161,7 @@ int main(int argc, char** argv){
             sum_structs[i].end_index = msize;
         }
         if (pthread_create(&summators[i], NULL, summator_func, &sum_structs[i])){
+            printf("[Main] Cannot create summator %d\n", i);
             for(int j = 0; j < i; j++){
                 pthread_join(summators[j], NULL);
             }
@@ -162,6 +172,9 @@ int main(int argc, char** argv){
     for(int i = 0; i < n; i++){
         pthread_join(summators[i], NULL);
     }
+    #ifdef TIME_OUTPUT
+    clock_gettime(CLOCK_MONOTONIC_RAW, &sum_end);
+    #endif
 
     // write matrix, use reader1 as writer
     ThreadWriterMatrix wm = {mode, height1, width1, argv[3], m1.data};
@@ -185,5 +198,13 @@ end_main:
     if (sum_structs != NULL){
         free(sum_structs);
     }
+    #ifdef TIME_OUTPUT
+    if (ret == 0){
+        clock_gettime(CLOCK_MONOTONIC_RAW, &global_end);
+        long global_time = (global_end.tv_sec - global_start.tv_sec) * 1000000 + (global_end.tv_nsec - global_start.tv_nsec) / 1000;
+        long sum_time = (sum_end.tv_sec - sum_start.tv_sec) * 1000000 + (sum_end.tv_nsec - sum_start.tv_nsec) / 1000;
+        printf("Matrix %ldx%ld with %ld threads: global time=%ld; sum time = %ld\n", height1, width1, n, global_time, sum_time);
+    }
+    #endif
     return ret;
 }

@@ -41,7 +41,7 @@ void readers_func(int* arr, char* filename1, char* filename2, char mode, long in
 
 int main(int argc, char** argv){
     if (argc < 4){
-        puts("Usage: generate_matrix <input_filename1> <input_filename2> <output_filename1> <mode>\nMode: bin (default) or text");
+        puts("Usage: process_sum <input_filename1> <input_filename2> <output_filename1> <mode>\nMode: bin (default) or text");
         return 1;
     }
     char mode = 0;

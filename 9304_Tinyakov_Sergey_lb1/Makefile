@@ -1,5 +1,5 @@
 CC = gcc
-FLAGS = 
+FLAGS = -DTIME_OUTPUT
 SRC_DIR = ./src
 BIN_GEN = generate_matrix
 BIN_GEN_DEP = $(SRC_DIR)/generate_matrix.c
@@ -26,19 +26,19 @@ ALL_BINS = $(BIN_GEN) $(BIN_READ) $(BIN_PROCESSES) $(BIN_THREADS)
 all: $(ALL_BINS)
 
 $(BIN_GEN): $(BIN_GEN_DEP)
-	$(CC) $(BIN_GEN_DEP) -o $@
+	$(CC) $(FLAGS) $(BIN_GEN_DEP) -o $@
 
 $(BIN_READ): $(BIN_READ_DEP)
-	$(CC) $(BIN_READ_DEP) -o $@
+	$(CC) $(FLAGS) $(BIN_READ_DEP) -o $@
 
 $(BIN_PROCESSES): $(BIN_PROCESSES_DEPS) $(BIN_PROCESSES_HEADERS)
-	$(CC) $(BIN_PROCESSES_DEPS) -o $@
+	$(CC) $(FLAGS) $(BIN_PROCESSES_DEPS) -o $@
 
 $(BIN_THREADS): $(BIN_THREADS_DEPS) $(BIN_THREADS_HEADERS)
-	$(CC) $(BIN_THREADS_DEPS) -lpthread -o $@
+	$(CC) $(FLAGS) $(BIN_THREADS_DEPS) -lpthread -o $@
 
 clean:
-	rm -f *.o *.bin *.mat $(ALL_BINS)
+	rm -f *.o *.bin *.mat *.log $(ALL_BINS)
 
 remove_matrices:
 	rm -f *.o *.bin *.mat
